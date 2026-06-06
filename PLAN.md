@@ -88,8 +88,11 @@ same Access application.
 **Capabilities:**
 - [ ] **Resources CRUD:** create, edit, delete; bulk actions.
 - [ ] **Move** a resource to a different category.
-- [ ] **Categories CRUD:** create, rename, edit icon/description, delete
-      (decide: reparent children & set resources' category to null, or block).
+- [ ] **Categories CRUD:** create, rename, edit icon/description, delete.
+      **Delete = reparent:** on deletion, the node's children are reparented to
+      the deleted node's `parentId` (→ top-level if it was a section), and
+      resources pointing at it move to that same `parentId` (null if it was a
+      section). No orphans, no data loss.
 - [ ] **Reorder / re-nest** categories (drag-and-drop → `sortOrder` / `parentId`).
 - [ ] **Suggestion queue** (overlaps §6): list `status='pending'`, approve
       (→ `published`) or reject (→ `rejected`), optionally edit before approving.
@@ -129,9 +132,16 @@ Let any visitor propose a resource into a chosen category; it lands as
 
 Use **Workers AI** + **Vectorize** to make 450+ resources easier to find.
 
+**Search strategy (decided): hybrid.** Keep the fast keyword (LIKE) search as
+the default — instant, free, exact for known terms. Add semantic search as an
+opt-in **"Smart search"** toggle (embeds the query once, queries Vectorize for
+nearest neighbors). This avoids an embedding call on every keystroke and keeps
+the simple path simple. The same nearest-neighbor query powers "related
+resources".
+
 - [ ] **Semantic search:** embed each resource (title + description + tags) into
-      Vectorize; embed the query; return nearest neighbors. Blend with / replace
-      the current LIKE search, or expose as a "smart search" mode.
+      Vectorize; on "Smart search", embed the query and return nearest
+      neighbors. Default search stays keyword/LIKE.
 - [ ] **Related resources:** on a detail view, show nearest neighbors.
 - [ ] **AI-assisted intake:** when a resource/suggestion is added with just a
       URL, generate a title, summary, suggested `type`, suggested `category`,
@@ -148,24 +158,43 @@ The Worker already reserves these in comments.
 ## 8. Styling: Keel design system
 
 Adopt **Keel** (`@ops-forward/keel`) — https://github.com/czhengjuarez/Keel —
-as the visual layer, replacing the ad-hoc Tailwind classes used in Phase 2.
+as the visual layer, replacing the ad-hoc Tailwind classes from Phase 2.
 
-What Keel provides (per its README):
-- `import '@ops-forward/keel/styles.css'` — base styles + design tokens
-  (CSS/JSON/TS artifacts).
-- Class helpers: `buttonClass({ variant, size, disabled })`, `cardClass(...)`.
-- Brand gradient `linear-gradient(180deg, #FB41AA 0%, #8F1F57 100%)`.
+What Keel actually ships (from `packages/keel`):
+- **React components:** `Button`, `Badge`, `Card`, `InputField`, `SelectField`,
+  `TextareaField`, `Switch` (peer dep `react >=18`).
+- **CSS:** `src/styles.css` with `of-*` component classes
+  (`.of-btn`, `.of-btn--primary|secondary|ghost|tint|danger`, `--sm/md/lg`, …).
+- **Tokens:** `tokens/tokens.css` + `colors_and_type.css` — a semantic token
+  system driven by **`light-dark()`** with `color-scheme: light dark`.
+  Primitives `--of-magenta-*`, `--of-gray-*`, status colors; semantic surfaces
+  `--of-bg-base/elevated/recessed`, `--of-fg-*`, `--of-border-line`,
+  `--of-bg-brand`, `--of-ring`, radii/durations/fonts (Space Grotesk, Inter,
+  JetBrains Mono).
 - **Lucide** icons, `stroke-width: 1.75`, `20px` default.
 
-**Tasks:**
-- [ ] Resolve install path: Keel is a GitHub monorepo package, not (yet) on
-      public npm — decide between installing via git URL, publishing to a
-      registry, or vendoring the built `styles.css` + helpers. **(open question)**
-- [ ] Replace card/button/badge styling in `ResourceCard`, `CategorySidebar`,
-      and `App` header with Keel helpers + tokens.
-- [ ] Add Lucide for icons (type badges, sidebar chevrons, actions).
-- [ ] Map current dark theme to Keel tokens; confirm whether Keel is
-      light/dark/both.
+**Theming (resolves Q2): support both light and dark.** Keel's `light-dark()`
+tokens adapt automatically from `color-scheme`. We expose a theme toggle
+(light / dark / system) that sets `color-scheme` on `:root`; no per-component
+work needed. (Phase 2's hardcoded dark Tailwind classes get removed.)
+
+**Distribution (resolves Q1): vendor it.** `@ops-forward/keel` lives in a
+`packages/keel` workspace inside a *private* monorepo, so `npm i github:…`
+would resolve the private root package (`keel-system`), not the sub-package —
+git-install won't work cleanly, and it's not on public npm. Plan:
+- [ ] Vendor Keel into `src/keel/` — copy `tokens/tokens.css` +
+      `colors_and_type.css` + `packages/keel/src/styles.css` + the component
+      `.tsx` files (+ `utils.ts`, `types.ts`). Record the source commit hash in
+      a header comment so updates are traceable.
+- [ ] Import the token + component CSS in `src/index.css` (replacing the raw
+      Tailwind import, or keeping Tailwind only for layout utilities — TBD).
+- [ ] (Future, optional) if Keel gets published to GitHub Packages, switch from
+      vendored copy to the registry dependency.
+
+**Migration tasks:**
+- [ ] Restyle `ResourceCard` with Keel `Card` + `Badge`, header buttons/inputs
+      with `Button`/`InputField`/`SelectField`, sidebar with token colors.
+- [ ] Add Lucide for icons (type badges, sidebar chevrons, admin actions).
 
 ---
 
@@ -198,15 +227,19 @@ What Keel provides (per its README):
 
 ---
 
-## 11. Open questions
+## 11. Decisions & open questions
 
-1. **Keel distribution** — how do we consume `@ops-forward/keel` (git dep,
-   private registry, or vendored build)? See §8.
-2. **Keel theming** — light, dark, or both? Phase 2 UI is dark.
-3. **Category deletion semantics** — reparent children + null out resource
-   links, or block deletion when non-empty?
-4. **Suggestion spam protection** — Turnstile or simpler?
-5. **Search strategy** — does AI semantic search replace LIKE search, or sit
-   beside it as a "smart" mode?
+**Resolved:**
+1. ✅ **Keel distribution** — vendor it into `src/keel/` (private monorepo
+   sub-package, not installable via npm/git). See §8.
+2. ✅ **Keel theming** — support **both** light and dark via Keel's `light-dark()`
+   tokens + a theme toggle. See §8.
+3. ✅ **Category deletion** — **reparent** children and resources to the deleted
+   node's parent. See §5.
+4. ✅ **Search strategy** — **hybrid**: keyword/LIKE by default, opt-in "Smart
+   search" semantic mode + related-resources. See §7.
+
+**Still open:**
+5. **Suggestion spam protection** — Turnstile or simpler? (Phase 4)
 6. **Admin identity** — single curator, or multiple Access-authorized admins
-   (do we need `updatedBy` auditing)?
+   (do we need `updatedBy` auditing)? (Phase 3)
