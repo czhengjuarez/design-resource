@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "design-resources",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-06-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // D1 database. Create with: npx wrangler d1 create design-resources
+  // then paste the returned database_id below (replace the placeholder).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "design-resources",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "db/migrations"
+    }
+  ]
+  // Phase 3 bindings (added later):
+  // "ai": { "binding": "AI" },
+  // "vectorize": [{ "binding": "VECTORIZE", "index_name": "design-resources" }],
+  // "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "design-resources-images" }]
+}
