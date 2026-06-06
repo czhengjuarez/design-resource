@@ -66,6 +66,10 @@ export interface CodaTable {
   rowCount?: number;
   tableType?: string;
 }
+export interface CodaTableDetail extends CodaTable {
+  parent?: { id: string; name?: string; type?: string };
+  displayColumn?: { id: string; name?: string };
+}
 export interface CodaColumn {
   id: string;
   name: string;
@@ -117,6 +121,11 @@ export function listTables(docId: string): Promise<CodaTable[]> {
   return listAll<CodaTable>(`/docs/${docId}/tables?tableTypes=table&limit=100`);
 }
 
+/** Full table detail (includes `parent` page reference and `displayColumn`). */
+export function getTable(docId: string, tableId: string): Promise<CodaTableDetail> {
+  return api<CodaTableDetail>(`/docs/${docId}/tables/${tableId}`);
+}
+
 export function listColumns(docId: string, tableId: string): Promise<CodaColumn[]> {
   return listAll<CodaColumn>(`/docs/${docId}/tables/${tableId}/columns?limit=100`);
 }
@@ -134,21 +143,26 @@ export function listPages(docId: string): Promise<CodaPage[]> {
 
 /** Export a page's canvas content as Markdown (async job + poll + download). */
 export async function exportPageMarkdown(docId: string, pageId: string): Promise<string> {
-  const begin = await api<{ id: string; status: string; href: string }>(
+  const token = getToken();
+  const begin = await api<{ id: string; status?: string; href?: string }>(
     `/docs/${docId}/pages/${pageId}/export`,
     { method: "POST", body: JSON.stringify({ outputFormat: "markdown" }) },
   );
-  // Poll until the export completes.
-  for (let i = 0; i < 30; i++) {
-    const status = await api<{ status: string; downloadLink?: string }>(
-      `/docs/${docId}/pages/${pageId}/export/${begin.id}`,
-    );
+  const statusUrl = begin.href ?? `${BASE}/docs/${docId}/pages/${pageId}/export/${begin.id}`;
+
+  // Poll. The status endpoint can 404 briefly until the job registers, so we
+  // tolerate 404/202 as "not ready yet" rather than failing.
+  for (let i = 0; i < 40; i++) {
+    await sleep(i === 0 ? 800 : 1500);
+    const res = await fetch(statusUrl, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 404 || res.status === 202) continue;
+    if (res.status === 429 || res.status >= 500) continue;
+    if (!res.ok) throw new Error(`Page export ${res.status}: ${pageId}\n${await res.text()}`);
+    const status = (await res.json()) as { status?: string; downloadLink?: string };
     if (status.status === "complete" && status.downloadLink) {
-      const res = await fetch(status.downloadLink);
-      return await res.text();
+      return await (await fetch(status.downloadLink)).text();
     }
     if (status.status === "failed") throw new Error(`Page export failed: ${pageId}`);
-    await sleep(1500);
   }
   throw new Error(`Page export timed out: ${pageId}`);
 }
