@@ -1,7 +1,7 @@
-import { useState } from "react";
-import type { CategoryNode } from "../types";
+import { useState } from 'react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import type { CategoryNode } from '../types';
 
-/** Total published resources in a node and all its descendants. */
 function rollup(node: CategoryNode): number {
   return node.children.reduce((sum, c) => sum + rollup(c), node.resourceCount);
 }
@@ -25,31 +25,36 @@ function TreeItem({
   return (
     <li>
       <div
-        className={`group flex items-center gap-1 rounded-md pr-2 text-sm ${
-          isSelected
-            ? "bg-emerald-500/15 text-emerald-300"
-            : "text-neutral-300 hover:bg-neutral-800/60"
-        }`}
-        style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        className="flex items-center rounded-md pr-1"
+        style={{ paddingLeft: `${depth * 14}px` }}
       >
-        {hasChildren ? (
-          <button
-            onClick={() => setOpen((o) => !o)}
-            className="flex h-6 w-5 shrink-0 items-center justify-center text-neutral-500 hover:text-neutral-200"
-            aria-label={open ? "Collapse" : "Expand"}
-          >
-            {open ? "▾" : "▸"}
-          </button>
-        ) : (
-          <span className="w-5 shrink-0" />
-        )}
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex h-7 w-6 shrink-0 items-center justify-center"
+          style={{ color: 'var(--of-fg-subtle)', visibility: hasChildren ? 'visible' : 'hidden' }}
+          aria-label={open ? 'Collapse' : 'Expand'}
+        >
+          {open
+            ? <ChevronDown size={14} strokeWidth={1.75} />
+            : <ChevronRight size={14} strokeWidth={1.75} />}
+        </button>
         <button
           onClick={() => onSelect(node.id)}
-          className="flex flex-1 items-center gap-2 truncate py-1.5 text-left"
+          className="flex flex-1 items-center gap-2 truncate rounded-md py-1 pl-1 pr-2 text-left text-sm transition-colors"
+          style={{
+            background: isSelected ? 'var(--of-bg-brand-tint)' : 'transparent',
+            color: isSelected ? 'var(--of-fg-brand)' : 'var(--of-fg-muted)',
+          }}
+          onMouseEnter={(e) => {
+            if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--of-bg-recessed)';
+          }}
+          onMouseLeave={(e) => {
+            if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+          }}
         >
-          {node.icon && <span className="shrink-0">{node.icon}</span>}
+          {node.icon && <span className="shrink-0 text-base leading-none">{node.icon}</span>}
           <span className="truncate">{node.name}</span>
-          <span className="ml-auto shrink-0 text-xs text-neutral-500">
+          <span className="ml-auto shrink-0 text-xs" style={{ color: 'var(--of-fg-subtle)' }}>
             {total}
           </span>
         </button>
@@ -83,19 +88,25 @@ export default function CategorySidebar({
   const grandTotal = categories.reduce((s, c) => s + rollup(c), 0);
 
   return (
-    <nav className="space-y-1">
+    <nav>
       <button
         onClick={() => onSelect(null)}
-        className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm ${
-          selectedId === null
-            ? "bg-emerald-500/15 text-emerald-300"
-            : "text-neutral-300 hover:bg-neutral-800/60"
-        }`}
+        className="mb-1 flex w-full items-center justify-between rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+        style={{
+          background: selectedId === null ? 'var(--of-bg-brand-tint)' : 'transparent',
+          color: selectedId === null ? 'var(--of-fg-brand)' : 'var(--of-fg-default)',
+        }}
+        onMouseEnter={(e) => {
+          if (selectedId !== null) (e.currentTarget as HTMLElement).style.background = 'var(--of-bg-recessed)';
+        }}
+        onMouseLeave={(e) => {
+          if (selectedId !== null) (e.currentTarget as HTMLElement).style.background = 'transparent';
+        }}
       >
-        <span className="font-medium">All resources</span>
-        <span className="text-xs text-neutral-500">{grandTotal}</span>
+        <span>All resources</span>
+        <span style={{ color: 'var(--of-fg-subtle)', fontSize: '12px' }}>{grandTotal}</span>
       </button>
-      <ul>
+      <ul className="space-y-0.5">
         {categories.map((cat) => (
           <TreeItem
             key={cat.id}

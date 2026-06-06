@@ -1,0 +1,14 @@
+/* Vendored from github.com/czhengjuarez/Keel @ b26c1f9 — do not edit directly */
+/* Google Fonts import is in index.css to ensure it precedes all rule blocks */
+
+[data-mode="light"] { color-scheme: light; }
+[data-mode="dark"]  { color-scheme: dark; }
+
+html, body {
+  font-family: var(--of-font-sans);
+  color: var(--of-fg-default);
+  background: var(--of-bg-base);
+  font-size: var(--of-text-base);
+  line-height: var(--of-leading-normal);
+  -webkit-font-smoothing: antialiased;
+}

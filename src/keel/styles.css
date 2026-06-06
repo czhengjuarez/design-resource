@@ -1,0 +1,76 @@
+/* Vendored from github.com/czhengjuarez/Keel @ b26c1f9 — do not edit directly */
+
+.of-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--of-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: var(--of-font-sans);
+  font-weight: 600;
+  line-height: 1;
+  transition: background var(--of-dur-fast), border-color var(--of-dur-fast), color var(--of-dur-fast), box-shadow var(--of-dur-fast);
+}
+.of-btn > svg, .of-btn > img, .of-btn > i { display: block; flex-shrink: 0; }
+.of-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--of-ring); }
+.of-btn--sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.of-btn--md { height: 36px; padding: 0 14px; font-size: 14px; }
+.of-btn--lg { height: 42px; padding: 0 16px; font-size: 15px; }
+.of-btn--primary { background: var(--of-bg-brand); color: var(--of-fg-on-brand); border-color: var(--of-bg-brand); }
+.of-btn--primary:hover { background: var(--of-bg-brand-hover); border-color: var(--of-bg-brand-hover); }
+.of-btn--secondary { background: var(--of-bg-elevated); color: var(--of-fg-default); border-color: var(--of-border-line); }
+.of-btn--secondary:hover { background: var(--of-bg-recessed); }
+.of-btn--ghost { background: transparent; color: var(--of-fg-brand); border-color: transparent; }
+.of-btn--ghost:hover { background: var(--of-bg-brand-tint); }
+.of-btn--tint { background: var(--of-bg-brand-tint); color: var(--of-fg-brand); border-color: color-mix(in srgb, var(--of-magenta-400) 35%, transparent); }
+.of-btn--tint:hover { background: var(--of-bg-brand-subtle); }
+.of-btn--danger { background: var(--of-danger-500); color: #fff; border-color: var(--of-danger-500); }
+.of-btn--disabled, .of-btn:disabled, .of-btn[aria-disabled='true'] {
+  cursor: not-allowed; opacity: 0.55; box-shadow: none; pointer-events: none;
+}
+
+.of-badge {
+  display: inline-flex; align-items: center;
+  border-radius: 999px; border: 1px solid var(--of-border-line);
+  font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 8px;
+}
+.of-badge--default { background: var(--of-bg-recessed); color: var(--of-fg-muted); }
+.of-badge--purple  { background: var(--of-bg-brand-tint); color: var(--of-fg-brand); border-color: color-mix(in srgb, var(--of-magenta-400) 30%, transparent); }
+.of-badge--green   { background: var(--of-bg-success-tint); color: var(--of-fg-success); border-color: color-mix(in srgb, var(--of-success-500) 30%, transparent); }
+.of-badge--amber   { background: var(--of-bg-warning-tint); color: var(--of-fg-warning); border-color: color-mix(in srgb, var(--of-warning-500) 30%, transparent); }
+.of-badge--red     { background: var(--of-bg-danger-tint); color: var(--of-fg-danger); border-color: color-mix(in srgb, var(--of-danger-500) 30%, transparent); }
+.of-badge--blue    { background: var(--of-bg-info-tint); color: var(--of-fg-info); border-color: color-mix(in srgb, var(--of-info-500) 30%, transparent); }
+
+.of-card {
+  background: var(--of-bg-elevated);
+  border: 1px solid var(--of-border-line);
+  border-radius: var(--of-radius-lg);
+  box-shadow: var(--of-shadow-sm);
+  padding: 16px;
+}
+.of-card--brand-elevated {
+  background: linear-gradient(180deg, #FB41AA 0%, #8F1F57 100%);
+  border-color: rgba(255,255,255,0.24); color: #fff;
+  box-shadow: 0 18px 40px rgba(128,7,77,0.36), 0 4px 10px rgba(28,6,18,0.18);
+}
+
+.of-field { display: flex; flex-direction: column; gap: 6px; }
+.of-label { font-size: 12px; font-weight: 600; color: var(--of-fg-default); }
+.of-field__hint { font-size: 11px; color: var(--of-fg-subtle); }
+.of-field__error { font-size: 11px; color: var(--of-fg-danger); margin-top: 2px; }
+.of-field.of-field--error .of-input,
+.of-field.of-field--error .of-select,
+.of-field.of-field--error .of-textarea { border-color: var(--of-danger-500); }
+
+.of-input, .of-select, .of-textarea {
+  width: 100%; font-family: inherit; font-size: 14px;
+  padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--of-border-line);
+  background: var(--of-bg-elevated); color: var(--of-fg-default); outline: none;
+}
+.of-input:focus, .of-select:focus, .of-textarea:focus {
+  border-color: var(--of-border-brand); box-shadow: 0 0 0 3px var(--of-ring);
+}
+.of-textarea { resize: vertical; min-height: 96px; }

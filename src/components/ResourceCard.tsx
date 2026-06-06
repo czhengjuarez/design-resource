@@ -1,72 +1,86 @@
-import type { Resource } from "../types";
+import { ExternalLink } from 'lucide-react';
+import { badgeClass, cardClass } from '../keel';
+import type { KeelBadgeVariant } from '../keel';
+import type { Resource } from '../types';
 
-const TYPE_LABELS: Record<string, string> = {
-  article: "Article",
-  book: "Book",
-  talk: "Talk",
-  video: "Video",
-  tool: "Tool",
-  person: "Person",
-  event: "Event",
-  thread: "Thread",
-  note: "Note",
-  method: "Method",
-  podcast: "Podcast",
-  newsletter: "Newsletter",
+const TYPE_META: Record<string, { label: string; variant: KeelBadgeVariant }> = {
+  article:    { label: 'Article',    variant: 'default' },
+  book:       { label: 'Book',       variant: 'blue' },
+  talk:       { label: 'Talk',       variant: 'purple' },
+  video:      { label: 'Video',      variant: 'purple' },
+  tool:       { label: 'Tool',       variant: 'green' },
+  person:     { label: 'Person',     variant: 'amber' },
+  event:      { label: 'Event',      variant: 'green' },
+  thread:     { label: 'Thread',     variant: 'default' },
+  note:       { label: 'Note',       variant: 'default' },
+  method:     { label: 'Method',     variant: 'blue' },
+  podcast:    { label: 'Podcast',    variant: 'amber' },
+  newsletter: { label: 'Newsletter', variant: 'amber' },
 };
 
 function hostname(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return null;
-  }
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch { return null; }
 }
 
 export default function ResourceCard({ resource }: { resource: Resource }) {
   const { url, title, description, author, type, tags } = resource;
+  const meta = TYPE_META[type] ?? { label: type, variant: 'default' as KeelBadgeVariant };
   const host = url ? hostname(url) : null;
 
   const inner = (
     <>
-      <div className="flex items-center gap-2 text-xs">
-        <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-neutral-300">
-          {TYPE_LABELS[type] ?? type}
-        </span>
-        {host && <span className="truncate text-neutral-500">{host}</span>}
+      <div className="flex items-center justify-between gap-2">
+        <span className={badgeClass({ variant: meta.variant })}>{meta.label}</span>
+        {host && (
+          <span className="flex items-center gap-1 truncate text-xs" style={{ color: 'var(--of-fg-subtle)' }}>
+            <ExternalLink size={10} strokeWidth={1.75} />
+            {host}
+          </span>
+        )}
       </div>
-      <h3 className="mt-2 font-medium leading-snug text-neutral-100 group-hover:text-emerald-300">
+      <h3
+        className="mt-3 text-sm font-semibold leading-snug"
+        style={{ color: 'var(--of-fg-default)' }}
+      >
         {title}
       </h3>
-      {author && <p className="mt-1 text-sm text-neutral-400">{author}</p>}
+      {author && (
+        <p className="mt-1 text-xs" style={{ color: 'var(--of-fg-subtle)' }}>{author}</p>
+      )}
       {description && (
-        <p className="mt-2 line-clamp-3 text-sm text-neutral-400">
+        <p
+          className="mt-2 line-clamp-3 text-xs leading-relaxed"
+          style={{ color: 'var(--of-fg-muted)' }}
+        >
           {description}
         </p>
       )}
       {tags && tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1">
           {tags.slice(0, 4).map((t) => (
-            <span
-              key={t}
-              className="rounded bg-neutral-800/70 px-1.5 py-0.5 text-xs text-neutral-400"
-            >
-              {t}
-            </span>
+            <span key={t} className={badgeClass({ variant: 'default' })}>{t}</span>
           ))}
         </div>
       )}
     </>
   );
 
-  const className =
-    "group flex flex-col rounded-xl border border-neutral-800 bg-neutral-900 p-4 transition hover:border-neutral-700 hover:bg-neutral-900/70";
+  const base = cardClass({
+    className: 'flex flex-col transition-shadow hover:shadow-md cursor-default',
+  });
 
   return url ? (
-    <a href={url} target="_blank" rel="noreferrer" className={className}>
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className={base}
+      style={{ textDecoration: 'none' }}
+    >
       {inner}
     </a>
   ) : (
-    <div className={className}>{inner}</div>
+    <div className={base}>{inner}</div>
   );
 }
