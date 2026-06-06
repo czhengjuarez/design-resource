@@ -11,6 +11,29 @@ export interface Env {
   // IMAGES: R2Bucket;
 }
 
+/**
+ * Extract a sortable last name from a display name.
+ * Strips emoji, parenthetical content (pronouns, labels), and trailing
+ * credentials (", CPCC, ACC"), then returns the last space-delimited token.
+ *
+ * Examples:
+ *   "Brad Frost"                        → "frost"
+ *   "Changying (Z) Zheng"               → "zheng"
+ *   "Derek Featherstone (He/Him)"       → "featherstone"
+ *   "Sheri Byrne-Haber (disabled) …"   → "byrne-haber"
+ *   "Teresa Brazen, CPCC, ACC"          → "brazen"
+ *   "🐱 Catt Small 👩🏾‍💻"               → "small"
+ */
+function lastName(title: string): string {
+  const cleaned = title
+    .replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu, "") // strip emoji
+    .replace(/\([^)]*\)/g, "")   // strip (...) blocks
+    .replace(/,.*$/, "")         // strip ", credentials" suffix
+    .trim();
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  return (parts.at(-1) ?? cleaned).toLowerCase();
+}
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/api/health", (c) =>
@@ -155,6 +178,17 @@ app.get("/api/resources", async (c) => {
   }
 
   const where = and(...filters);
+
+  // Person type: fetch all matches, sort by last name in JS, then paginate.
+  // Titles have parentheticals like "(He/Him)", credentials like ", CPCC",
+  // and emoji that make SQL string sorting unreliable.
+  if (type === "person") {
+    const all = await db.select().from(resources).where(where).all();
+    all.sort((a, b) => lastName(a.title).localeCompare(lastName(b.title)));
+    const total = all.length;
+    const items = all.slice(offset, offset + limit);
+    return c.json({ items, total, page, limit, hasMore: offset + items.length < total });
+  }
 
   const [{ total }] = await db
     .select({ total: sql<number>`count(*)` })
