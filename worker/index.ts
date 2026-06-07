@@ -246,6 +246,73 @@ app.get("/api/resources/:id", async (c) => {
   return c.json({ item });
 });
 
+/**
+ * POST /api/suggestions — public resource submission.
+ * Inserts as status='pending', source='suggestion' for admin review
+ * (see /api/admin/suggestions). Spam mitigations need no external services:
+ *   - honeypot: a field hidden from real users; bots tend to fill every field
+ *   - renderedAt: client-supplied timestamp from when the form mounted; a
+ *     submission faster than a human could plausibly fill the form is rejected
+ * Both failures return a generic success response so bots don't learn to adapt.
+ */
+const MIN_FILL_TIME_MS = 3_000;
+
+app.post("/api/suggestions", async (c) => {
+  const body = await c.req.json<{
+    title?: string;
+    url?: string;
+    type?: string;
+    categoryId?: number | null;
+    description?: string;
+    submitterName?: string;
+    submitterEmail?: string;
+    honeypot?: string;
+    renderedAt?: number;
+  }>().catch(() => ({}) as Record<string, never>);
+
+  const looksLikeSpam =
+    !!body.honeypot?.trim() ||
+    typeof body.renderedAt !== "number" ||
+    Date.now() - body.renderedAt < MIN_FILL_TIME_MS;
+
+  const title = body.title?.trim();
+  if (!title) return c.json({ error: "title required" }, 400);
+
+  const type = body.type && ALLOWED_TYPES.has(body.type) ? body.type : "article";
+
+  if (looksLikeSpam) {
+    // Pretend success — don't reveal the spam check to automated submitters.
+    return c.json({ ok: true }, 201);
+  }
+
+  const db = getDb(c.env.DB);
+
+  let categoryId: number | null = null;
+  if (body.categoryId != null) {
+    const [cat] = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(eq(categories.id, body.categoryId))
+      .limit(1)
+      .all();
+    categoryId = cat?.id ?? null;
+  }
+
+  await db.insert(resources).values({
+    title,
+    description: body.description?.trim() || null,
+    url: body.url?.trim() || null,
+    categoryId,
+    type,
+    source: "suggestion",
+    status: "pending",
+    submitterName: body.submitterName?.trim() || null,
+    submitterEmail: body.submitterEmail?.trim() || null,
+  });
+
+  return c.json({ ok: true }, 201);
+});
+
 // Public auth endpoints (login/logout/session check)
 app.route("/api/auth", authRoutes);
 

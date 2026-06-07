@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { fetchCategories, fetchResources } from './api';
 import CategorySidebar from './components/CategorySidebar';
 import ResourceCard from './components/ResourceCard';
@@ -148,6 +148,13 @@ export default function App() {
             Design Resources
           </h1>
 
+          <a
+            href="/suggest"
+            className={buttonClass({ variant: 'tint', size: 'sm', className: 'hidden sm:inline-flex' })}
+          >
+            <Plus size={14} strokeWidth={1.75} /> Suggest a resource
+          </a>
+
           <div className="ml-auto flex items-center gap-2">
             <input
               type="search"
@@ -241,6 +248,12 @@ export default function App() {
                 onSelect={(id) => { setCategory(id); setDrawerOpen(false); }}
               />
             )}
+            <a
+              href="/suggest"
+              className={buttonClass({ variant: 'tint', size: 'sm', className: 'mt-4 w-full justify-center' })}
+            >
+              <Plus size={14} strokeWidth={1.75} /> Suggest a resource
+            </a>
           </div>
         </div>
       )}
