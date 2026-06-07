@@ -154,7 +154,7 @@ fully invisible in public browse (`0` results when searched publicly).
 
 ---
 
-## 7. Feature area: AI findability (Cloudflare AI)  *(Phase 5)*
+## 7. Feature area: AI findability (Cloudflare AI)  *(Phase 5 — ✅ core shipped)*
 
 Use **Workers AI** + **Vectorize** to make 450+ resources easier to find.
 
@@ -165,19 +165,44 @@ nearest neighbors). This avoids an embedding call on every keystroke and keeps
 the simple path simple. The same nearest-neighbor query powers "related
 resources".
 
-- [ ] **Semantic search:** embed each resource (title + description + tags) into
-      Vectorize; on "Smart search", embed the query and return nearest
-      neighbors. Default search stays keyword/LIKE.
-- [ ] **Related resources:** on a detail view, show nearest neighbors.
-- [ ] **AI-assisted intake:** when a resource/suggestion is added with just a
-      URL, generate a title, summary, suggested `type`, suggested `category`,
-      and tags (admin reviews before saving).
-- [ ] **Natural-language filter:** "talks about design systems from 2023" →
-      structured filters.
-- [ ] Backfill embeddings for existing rows; keep them in sync on create/edit.
+**Shipped:**
+- [x] **Semantic search:** `worker/embeddings.ts` embeds title+description+
+      author+type+tags via `@cf/baai/bge-base-en-v1.5` (768-dim) into
+      Vectorize index `design-resources-embeddings` (cosine metric). Public
+      `GET /api/search/smart?q=…` embeds the query and ranks by similarity;
+      keyword/LIKE stays the default in `GET /api/resources`.
+- [x] **"Smart" toggle** in the public header (Sparkles icon, persisted to
+      localStorage): swaps to embedding-ranked results, 700ms debounce
+      (each query costs an AI call), explanatory banner, category/type
+      filters disabled in this mode (it ranks across everything by meaning).
+- [x] **Related resources:** `GET /api/resources/:id/related` — nearest
+      neighbors by embedding similarity. Surfaced as an inline "Related"
+      expansion on resource cards (no detail-view page needed — adapted the
+      original plan to the card-grid UI that exists).
+- [x] **Backfill + sync:** chunked admin endpoint
+      `POST /api/admin/embeddings/backfill` (40/call, paginated) — ran to
+      completion across all 452 resources. New writes stay in sync
+      automatically: create/edit/delete/suggestion-approve all call
+      `upsertResourceEmbedding`/`deleteResourceEmbedding` via `waitUntil`
+      (non-published resources are excluded from the index).
 
-Bindings to add to `wrangler.jsonc`: `AI` (Workers AI) and `VECTORIZE` (index).
-The Worker already reserves these in comments.
+**Verified (genuine semantic ranking, not keyword overlap):** the query
+*"helping someone feel confident in a new leadership role"* matches **0**
+keyword-search results but returns 5 relevant Smart Search results (self-
+leadership articles, "Authentic Leadership", etc.); "DesignOps 101" surfaces
+"DesignOps Blog/Handbook/State-of-DesignOps" as related resources.
+
+**Not done (lower priority, future work):**
+- [ ] **AI-assisted intake** — generate title/summary/type/category/tags from
+      just a URL when adding a resource or reviewing a suggestion.
+- [ ] **Natural-language filter** — "talks about design systems from 2023" →
+      structured filters (would need date extraction; most resources lack
+      publish dates in the current data).
+
+Bindings live in `wrangler.jsonc`: `ai: { binding: "AI" }` and
+`vectorize: [{ binding: "VECTORIZE", index_name: "design-resources-embeddings",
+remote: true }]` — `remote: true` is required because Vectorize has no local
+dev simulator.
 
 ---
 
@@ -269,7 +294,7 @@ written against. Prefer slug/title lookups in future data migrations.
 | 2.1 | List/card view toggle, theme toggle, mobile sidebar | ✅ done |
 | 3 | Admin CRUD + auth (resources/categories/suggestions, password gate) | ✅ done — set ADMIN_PASSWORD secret in prod |
 | 4 | Public suggestions + approval queue | ✅ done — submit form (/suggest) + honeypot/timing spam checks, full pipeline verified |
-| 5 | AI findability (Workers AI + Vectorize) | ⏳ |
+| 5 | AI findability (Workers AI + Vectorize) | ✅ core done — Smart Search + related resources live; AI-assisted intake & NL filters deferred |
 | 6 | Keel design system adoption | ✅ vendored + applied to public UI (admin pages still use raw Keel classes inline — fine, but could extract shared components) |
 | 7 | Remote deploy | ✅ live at design-resources.coscient.workers.dev |
 
