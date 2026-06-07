@@ -7,6 +7,9 @@ import { adminAuth, authRoutes } from "./auth";
 
 export interface Env {
   DB: D1Database;
+  // Present in production (Workers Static Assets); undefined in the Vite dev
+  // simulator, where Vite's own dev server handles SPA routing instead.
+  ASSETS?: Fetcher;
   ADMIN_PASSWORD?: string;
   // Added in later phases:
   // AI: Ai;
@@ -319,5 +322,16 @@ app.route("/api/auth", authRoutes);
 // Admin routes — gated by built-in password session auth (worker/auth.ts)
 app.use("/api/admin/*", adminAuth);
 app.route("/api/admin", admin);
+
+/**
+ * SPA fallback for everything else (/admin, /suggest, /admin/login, …).
+ * Without this, Hono's own 404 short-circuits the request before Cloudflare's
+ * `not_found_handling: single-page-application` asset layer can serve
+ * index.html — breaking direct navigation, refreshes, and bookmarks on any
+ * client-routed page (only worked in testing because React Router took over
+ * after the initial "/" load). In the Vite dev simulator ASSETS is undefined;
+ * Vite's own dev server handles SPA routing there instead.
+ */
+app.get("*", (c) => (c.env.ASSETS ? c.env.ASSETS.fetch(c.req.raw) : c.notFound()));
 
 export default app;
