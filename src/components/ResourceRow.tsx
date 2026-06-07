@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Link2 } from 'lucide-react';
 import { badgeClass } from '../keel';
 import type { KeelBadgeVariant } from '../keel';
 import type { Resource } from '../types';
@@ -54,7 +54,9 @@ export default function ResourceRow({ resource }: { resource: Resource }) {
           className="hidden shrink-0 items-center gap-1 text-xs sm:flex"
           style={{ color: 'var(--of-fg-subtle)' }}
         >
-          <ExternalLink size={10} strokeWidth={1.75} />
+          {url?.includes('linkedin.com')
+            ? <Link2 size={10} strokeWidth={1.75} />
+            : <ExternalLink size={10} strokeWidth={1.75} />}
           {host}
         </span>
       )}

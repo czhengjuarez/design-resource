@@ -179,10 +179,22 @@ app.get("/api/resources", async (c) => {
 
   const where = and(...filters);
 
-  // Person type: fetch all matches, sort by last name in JS, then paginate.
-  // Titles have parentheticals like "(He/Him)", credentials like ", CPCC",
-  // and emoji that make SQL string sorting unreliable.
-  if (type === "person") {
+  // When all results are persons (explicit filter or a people-only category),
+  // fetch everything and sort by last name A-Z. The set is always small enough
+  // to hold in memory, and newly added people slot in automatically.
+  const [{ total: totalCount }] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(resources)
+    .where(where)
+    .all();
+  const [{ total: personCount }] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(resources)
+    .where(and(where, eq(resources.type, "person")))
+    .all();
+  const allPersons = totalCount > 0 && totalCount === personCount;
+
+  if (allPersons) {
     const all = await db.select().from(resources).where(where).all();
     all.sort((a, b) => lastName(a.title).localeCompare(lastName(b.title)));
     const total = all.length;
