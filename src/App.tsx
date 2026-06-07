@@ -164,7 +164,7 @@ export default function App() {
           </button>
 
           <h1
-            className="text-base font-semibold tracking-tight"
+            className="shrink-0 text-base font-semibold tracking-tight"
             style={{ fontFamily: 'var(--of-font-display)', color: 'var(--of-fg-default)' }}
           >
             Design Resources
@@ -177,75 +177,77 @@ export default function App() {
             <Plus size={14} strokeWidth={1.75} /> Suggest a resource
           </a>
 
-          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
-              className={inputClass({ className: 'min-w-0 flex-1 max-w-sm sm:max-w-md' })}
-              style={{ height: '34px', padding: '0 10px' }}
-            />
+          {/* Single flex row from here on — the search input is the ONLY
+              growing element among shrink-0 siblings. Nesting another flex-1
+              container here previously caused its children to overflow their
+              allotted space and visually spill over the title/suggest button. */}
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
+            className={inputClass({ className: 'min-w-0 flex-1 max-w-md' })}
+            style={{ height: '34px', padding: '0 10px' }}
+          />
+          <button
+            onClick={() => setSmartMode(!smartMode)}
+            title={smartMode ? 'Smart search on — ranks by meaning, not keywords' : 'Turn on Smart search (AI-ranked by meaning)'}
+            className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
+            style={{
+              background: smartMode ? 'var(--of-bg-brand-tint)' : 'var(--of-bg-recessed)',
+              color: smartMode ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+              border: `1px solid ${smartMode ? 'color-mix(in srgb, var(--of-magenta-400) 35%, transparent)' : 'var(--of-border-line)'}`,
+            }}
+          >
+            <Sparkles size={14} strokeWidth={1.75} />
+            <span className="hidden sm:inline">Smart</span>
+          </button>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            disabled={smartMode}
+            title={smartMode ? 'Type filter is unavailable in Smart search — it ranks across everything by meaning' : undefined}
+            className={selectClass({ className: 'hidden shrink-0 lg:block w-36' })}
+            style={{ height: '34px', padding: '0 8px', opacity: smartMode ? 0.5 : 1 }}
+          >
+            {TYPES.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+
+          {/* View toggle */}
+          <div
+            className="flex shrink-0 items-center rounded-md p-0.5 gap-0.5"
+            style={{ background: 'var(--of-bg-recessed)', border: '1px solid var(--of-border-line)' }}
+          >
             <button
-              onClick={() => setSmartMode(!smartMode)}
-              title={smartMode ? 'Smart search on — ranks by meaning, not keywords' : 'Turn on Smart search (AI-ranked by meaning)'}
-              className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
+              onClick={() => setView('card')}
+              title="Card view"
+              className="flex h-7 w-7 items-center justify-center rounded transition-colors"
               style={{
-                background: smartMode ? 'var(--of-bg-brand-tint)' : 'var(--of-bg-recessed)',
-                color: smartMode ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
-                border: `1px solid ${smartMode ? 'color-mix(in srgb, var(--of-magenta-400) 35%, transparent)' : 'var(--of-border-line)'}`,
+                background: view === 'card' ? 'var(--of-bg-elevated)' : 'transparent',
+                color: view === 'card' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+                boxShadow: view === 'card' ? 'var(--of-shadow-xs)' : 'none',
               }}
             >
-              <Sparkles size={14} strokeWidth={1.75} />
-              <span className="hidden sm:inline">Smart</span>
+              <LayoutGrid size={14} strokeWidth={1.75} />
             </button>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              disabled={smartMode}
-              title={smartMode ? 'Type filter is unavailable in Smart search — it ranks across everything by meaning' : undefined}
-              className={selectClass({ className: 'hidden shrink-0 lg:block w-36' })}
-              style={{ height: '34px', padding: '0 8px', opacity: smartMode ? 0.5 : 1 }}
+            <button
+              onClick={() => setView('list')}
+              title="List view"
+              className="flex h-7 w-7 items-center justify-center rounded transition-colors"
+              style={{
+                background: view === 'list' ? 'var(--of-bg-elevated)' : 'transparent',
+                color: view === 'list' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+                boxShadow: view === 'list' ? 'var(--of-shadow-xs)' : 'none',
+              }}
             >
-              {TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+              <List size={14} strokeWidth={1.75} />
+            </button>
+          </div>
 
-            {/* View toggle */}
-            <div
-              className="flex shrink-0 items-center rounded-md p-0.5 gap-0.5"
-              style={{ background: 'var(--of-bg-recessed)', border: '1px solid var(--of-border-line)' }}
-            >
-              <button
-                onClick={() => setView('card')}
-                title="Card view"
-                className="flex h-7 w-7 items-center justify-center rounded transition-colors"
-                style={{
-                  background: view === 'card' ? 'var(--of-bg-elevated)' : 'transparent',
-                  color: view === 'card' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
-                  boxShadow: view === 'card' ? 'var(--of-shadow-xs)' : 'none',
-                }}
-              >
-                <LayoutGrid size={14} strokeWidth={1.75} />
-              </button>
-              <button
-                onClick={() => setView('list')}
-                title="List view"
-                className="flex h-7 w-7 items-center justify-center rounded transition-colors"
-                style={{
-                  background: view === 'list' ? 'var(--of-bg-elevated)' : 'transparent',
-                  color: view === 'list' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
-                  boxShadow: view === 'list' ? 'var(--of-shadow-xs)' : 'none',
-                }}
-              >
-                <List size={14} strokeWidth={1.75} />
-              </button>
-            </div>
-
-            <div className="shrink-0">
-              <ThemeToggle theme={theme} setTheme={setTheme} />
-            </div>
+          <div className="shrink-0">
+            <ThemeToggle theme={theme} setTheme={setTheme} />
           </div>
         </div>
       </header>
