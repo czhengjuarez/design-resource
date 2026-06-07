@@ -10,9 +10,9 @@
   "observability": {
     "enabled": true
   },
-  // ADMIN_BYPASS_LOCAL is set via .dev.vars (gitignored, local-only — never
-  // deployed). It skips Cloudflare Access JWT validation in local dev.
-  // Production validates Cf-Access-Jwt-Assertion using the CF_ACCESS_AUD secret.
+  // ADMIN_PASSWORD gates /admin + /api/admin/* (built-in session auth —
+  // see worker/auth.ts; Cloudflare Access needs a custom domain we don't have).
+  // Local dev: set in .dev.vars (gitignored). Production: wrangler secret put ADMIN_PASSWORD
   // D1 database. Create with: npx wrangler d1 create design-resources
   // then paste the returned database_id below (replace the placeholder).
   "d1_databases": [

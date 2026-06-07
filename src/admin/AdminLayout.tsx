@@ -1,6 +1,8 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { LayoutList, FolderTree, Inbox } from "lucide-react";
+import { Navigate, NavLink, Outlet } from "react-router-dom";
+import { LayoutList, FolderTree, Inbox, LogOut } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { buttonClass } from "../keel";
+import { useSession, useLogout } from "./useAdminAuth";
 
 function usePendingCount() {
   return useQuery({
@@ -22,7 +24,21 @@ const NAV = [
 ];
 
 export default function AdminLayout() {
+  const { data: session, isLoading } = useSession();
   const { data: pendingCount } = usePendingCount();
+  const logout = useLogout();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--of-bg-base)" }}>
+        <p className="text-sm" style={{ color: "var(--of-fg-subtle)" }}>Loading…</p>
+      </div>
+    );
+  }
+
+  if (!session?.authenticated) {
+    return <Navigate to="/admin/login" replace />;
+  }
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--of-bg-base)", color: "var(--of-fg-default)" }}>
@@ -65,6 +81,16 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
+        <div className="p-3 border-t" style={{ borderColor: "var(--of-border-line)" }}>
+          <button
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            className={buttonClass({ variant: "secondary", size: "sm", className: "w-full justify-center gap-1.5" })}
+          >
+            <LogOut size={13} strokeWidth={1.75} />
+            {logout.isPending ? "Signing out…" : "Sign out"}
+          </button>
+        </div>
       </aside>
 
       {/* Page content */}

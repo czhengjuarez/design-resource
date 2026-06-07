@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
 import AdminLayout from "./admin/AdminLayout";
+import AdminLogin from "./admin/AdminLogin";
 import AdminResources from "./admin/AdminResources";
 import AdminCategories from "./admin/AdminCategories";
 import AdminSuggestions from "./admin/AdminSuggestions";
@@ -16,6 +17,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminResources />} />
             <Route path="resources" element={<AdminResources />} />

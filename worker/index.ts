@@ -3,12 +3,11 @@ import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { categories, resources, type Category } from "../db/schema";
 import { admin } from "./admin";
-import { adminAuth } from "./auth";
+import { adminAuth, authRoutes } from "./auth";
 
 export interface Env {
   DB: D1Database;
-  ADMIN_BYPASS_LOCAL?: string;
-  CF_ACCESS_AUD?: string;
+  ADMIN_PASSWORD?: string;
   // Added in later phases:
   // AI: Ai;
   // VECTORIZE: VectorizeIndex;
@@ -247,7 +246,10 @@ app.get("/api/resources/:id", async (c) => {
   return c.json({ item });
 });
 
-// Admin routes — protected by Cloudflare Access in production
+// Public auth endpoints (login/logout/session check)
+app.route("/api/auth", authRoutes);
+
+// Admin routes — gated by built-in password session auth (worker/auth.ts)
 app.use("/api/admin/*", adminAuth);
 app.route("/api/admin", admin);
 
