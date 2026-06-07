@@ -2,9 +2,13 @@ import { Hono } from "hono";
 import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { categories, resources, type Category } from "../db/schema";
+import { admin } from "./admin";
+import { adminAuth } from "./auth";
 
 export interface Env {
   DB: D1Database;
+  ADMIN_BYPASS_LOCAL?: string;
+  CF_ACCESS_AUD?: string;
   // Added in later phases:
   // AI: Ai;
   // VECTORIZE: VectorizeIndex;
@@ -242,5 +246,9 @@ app.get("/api/resources/:id", async (c) => {
   if (!item) return c.json({ error: "not found" }, 404);
   return c.json({ item });
 });
+
+// Admin routes — protected by Cloudflare Access in production
+app.use("/api/admin/*", adminAuth);
+app.route("/api/admin", admin);
 
 export default app;

@@ -22,6 +22,9 @@ export interface Resource {
   imageUrl: string | null;
   source: string;
   status: string;
+  submitterName: string | null;
+  submitterEmail: string | null;
+  codaRowId: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -10,6 +10,11 @@
   "observability": {
     "enabled": true
   },
+  // ADMIN_BYPASS_LOCAL=true skips Cloudflare Access JWT validation in local dev.
+  // Remove or set to "false" when deploying; real validation uses CF_ACCESS_AUD.
+  "vars": {
+    "ADMIN_BYPASS_LOCAL": "true"
+  },
   // D1 database. Create with: npx wrangler d1 create design-resources
   // then paste the returned database_id below (replace the placeholder).
   "d1_databases": [
