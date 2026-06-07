@@ -1,4 +1,7 @@
-import { ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ExternalLink, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { fetchRelated } from '../api';
 import { badgeClass, cardClass } from '../keel';
 import type { KeelBadgeVariant } from '../keel';
 import type { Resource } from '../types';
@@ -21,6 +24,60 @@ const TYPE_META: Record<string, { label: string; variant: KeelBadgeVariant }> = 
 function hostname(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
   catch { return null; }
+}
+
+/** Inline "more like this" panel — toggled without triggering the card's outer link. */
+function RelatedPanel({ resourceId }: { resourceId: number }) {
+  const [open, setOpen] = useState(false);
+  const relatedQuery = useQuery({
+    queryKey: ['related', resourceId],
+    queryFn: () => fetchRelated(resourceId),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const toggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen((o) => !o);
+  };
+
+  return (
+    <div className="mt-3 -mb-1">
+      <button
+        onClick={toggle}
+        className="flex items-center gap-1 text-xs font-medium"
+        style={{ color: 'var(--of-fg-brand)' }}
+      >
+        <Sparkles size={11} strokeWidth={1.75} />
+        Related
+        {open ? <ChevronUp size={11} strokeWidth={1.75} /> : <ChevronDown size={11} strokeWidth={1.75} />}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5 border-t pt-2" style={{ borderColor: 'var(--of-border-subtle)' }}>
+          {relatedQuery.isLoading && (
+            <p className="text-xs" style={{ color: 'var(--of-fg-subtle)' }}>Finding similar resources…</p>
+          )}
+          {relatedQuery.data?.length === 0 && (
+            <p className="text-xs" style={{ color: 'var(--of-fg-subtle)' }}>Nothing closely related yet.</p>
+          )}
+          {relatedQuery.data?.map((r) => (
+            <a
+              key={r.id}
+              href={r.url ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="block truncate text-xs hover:underline"
+              style={{ color: 'var(--of-fg-muted)', textDecoration: 'none' }}
+            >
+              {r.title}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ResourceCard({ resource }: { resource: Resource }) {
@@ -63,6 +120,7 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
           ))}
         </div>
       )}
+      <RelatedPanel resourceId={resource.id} />
     </>
   );
 

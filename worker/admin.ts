@@ -3,6 +3,7 @@ import { and, eq, or, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { categories, resources } from "../db/schema";
 import type { Env } from "./index";
+import { deleteResourceEmbedding, upsertResourceEmbedding, upsertResourceEmbeddingsBatch } from "./embeddings";
 
 export const admin = new Hono<{ Bindings: Env }>();
 
@@ -80,6 +81,7 @@ admin.post("/resources", async (c) => {
     })
     .returning();
 
+  c.executionCtx.waitUntil(upsertResourceEmbedding(c.env, row));
   return c.json({ item: row }, 201);
 });
 
@@ -109,6 +111,10 @@ admin.patch("/resources/:id", async (c) => {
     .returning();
 
   if (!row) return c.json({ error: "not found" }, 404);
+  // Re-embed on every edit (cheap relative to the request, keeps Smart Search
+  // current) — upsertResourceEmbedding also removes non-published items from
+  // the index, so unpublishing/rejecting via PATCH is handled too.
+  c.executionCtx.waitUntil(upsertResourceEmbedding(c.env, row));
   return c.json({ item: row });
 });
 
@@ -123,6 +129,7 @@ admin.delete("/resources/:id", async (c) => {
     .returning({ id: resources.id });
 
   if (!row) return c.json({ error: "not found" }, 404);
+  c.executionCtx.waitUntil(deleteResourceEmbedding(c.env, row.id));
   return c.json({ deleted: row.id });
 });
 
@@ -276,6 +283,7 @@ admin.post("/suggestions/:id/approve", async (c) => {
     .returning();
 
   if (!row) return c.json({ error: "not found or not pending" }, 404);
+  c.executionCtx.waitUntil(upsertResourceEmbedding(c.env, row));
   return c.json({ item: row });
 });
 
@@ -292,4 +300,47 @@ admin.post("/suggestions/:id/reject", async (c) => {
 
   if (!row) return c.json({ error: "not found or not pending" }, 404);
   return c.json({ rejected: row.id });
+});
+
+// ─── AI: embeddings backfill ──────────────────────────────────────────────────
+
+/**
+ * POST /api/admin/embeddings/backfill?offset=0&limit=40
+ * Embeds and upserts one chunk of published resources into Vectorize. Chunked
+ * (rather than all-at-once) to stay within Worker CPU/time limits — call
+ * repeatedly, advancing `offset` by the returned `processed` count, until
+ * `done` is true. Used to backfill Smart Search after the AI/Vectorize
+ * bindings were added (resources created after that point are embedded
+ * automatically on save — see worker/embeddings.ts).
+ */
+admin.post("/embeddings/backfill", async (c) => {
+  const offset = Math.max(0, parseInt(c.req.query("offset") ?? "0", 10) || 0);
+  const limit = Math.min(50, Math.max(1, parseInt(c.req.query("limit") ?? "40", 10) || 40));
+
+  const db = getDb(c.env.DB);
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(resources)
+    .where(eq(resources.status, "published"))
+    .all();
+
+  const batch = await db
+    .select()
+    .from(resources)
+    .where(eq(resources.status, "published"))
+    .orderBy(resources.id)
+    .limit(limit)
+    .offset(offset)
+    .all();
+
+  const processed = await upsertResourceEmbeddingsBatch(c.env, batch);
+
+  return c.json({
+    processed,
+    offset,
+    nextOffset: offset + batch.length,
+    total,
+    done: offset + batch.length >= total,
+  });
 });

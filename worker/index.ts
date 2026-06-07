@@ -4,6 +4,7 @@ import { getDb } from "./db";
 import { categories, resources, type Category } from "../db/schema";
 import { admin } from "./admin";
 import { adminAuth, authRoutes } from "./auth";
+import { relatedResources, semanticSearch } from "./embeddings";
 
 export interface Env {
   DB: D1Database;
@@ -11,9 +12,9 @@ export interface Env {
   // simulator, where Vite's own dev server handles SPA routing instead.
   ASSETS?: Fetcher;
   ADMIN_PASSWORD?: string;
-  // Added in later phases:
-  // AI: Ai;
-  // VECTORIZE: VectorizeIndex;
+  AI: Ai;
+  VECTORIZE: VectorizeIndex;
+  // Future:
   // IMAGES: R2Bucket;
 }
 
@@ -247,6 +248,66 @@ app.get("/api/resources/:id", async (c) => {
 
   if (!item) return c.json({ error: "not found" }, 404);
   return c.json({ item });
+});
+
+/**
+ * GET /api/resources/:id/related — nearest neighbors by embedding similarity.
+ * Returns up to 6 published resources most semantically similar to this one
+ * (e.g. an article on "design tokens" surfaces other design-systems pieces
+ * even without shared keywords). Falls back to an empty list gracefully if
+ * the resource has no embedding yet (e.g. created before Phase 5 backfill).
+ */
+app.get("/api/resources/:id/related", async (c) => {
+  const id = parseInt(c.req.param("id"), 10);
+  if (Number.isNaN(id)) return c.json({ error: "invalid id" }, 400);
+
+  const matches = await relatedResources(c.env, id, 6);
+  if (matches.length === 0) return c.json({ items: [] });
+
+  const db = getDb(c.env.DB);
+  const ids = matches.map((m) => m.id);
+  const rows = await db
+    .select()
+    .from(resources)
+    .where(and(inArray(resources.id, ids), eq(resources.status, "published")))
+    .all();
+
+  // Preserve similarity ranking (D1 doesn't guarantee row order for IN queries)
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const items = matches.map((m) => byId.get(m.id)).filter((r): r is typeof rows[number] => !!r);
+
+  return c.json({ items });
+});
+
+/**
+ * GET /api/search/smart?q=…&limit=24
+ * Semantic ("Smart") search — embeds the query and ranks published resources
+ * by cosine similarity, surfacing conceptually related results even when they
+ * don't share keywords with the query (the hybrid-search complement to the
+ * keyword/LIKE search in GET /api/resources). See PLAN.md §7 for the rationale.
+ */
+app.get("/api/search/smart", async (c) => {
+  const q = c.req.query("q")?.trim();
+  if (!q) return c.json({ items: [], total: 0 });
+
+  const limit = Math.min(48, Math.max(1, parseInt(c.req.query("limit") ?? "24", 10) || 24));
+  const matches = await semanticSearch(c.env, q, limit);
+  if (matches.length === 0) return c.json({ items: [], total: 0 });
+
+  const db = getDb(c.env.DB);
+  const ids = matches.map((m) => m.id);
+  const rows = await db
+    .select()
+    .from(resources)
+    .where(and(inArray(resources.id, ids), eq(resources.status, "published")))
+    .all();
+
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const items = matches
+    .map((m) => byId.get(m.id))
+    .filter((r): r is typeof rows[number] => !!r);
+
+  return c.json({ items, total: items.length });
 });
 
 /**

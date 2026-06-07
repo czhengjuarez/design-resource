@@ -23,9 +23,16 @@
       "database_id": "06d57493-5b56-4277-a712-5d8811c8b971",
       "migrations_dir": "db/migrations"
     }
+  ],
+  // Phase 5: AI-assisted findability (semantic "Smart search", related resources).
+  // Embedding model: @cf/baai/bge-base-en-v1.5 (768 dimensions, cosine metric —
+  // matches the Vectorize index created with `wrangler vectorize create`).
+  "ai": { "binding": "AI" },
+  // Vectorize has no local simulator — `remote: true` makes `wrangler dev`
+  // talk to the real hosted index so Smart Search/related-resources work locally.
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "design-resources-embeddings", "remote": true }
   ]
-  // Phase 3 bindings (added later):
-  // "ai": { "binding": "AI" },
-  // "vectorize": [{ "binding": "VECTORIZE", "index_name": "design-resources" }],
+  // Future (R2 images, if needed):
   // "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "design-resources-images" }]
 }

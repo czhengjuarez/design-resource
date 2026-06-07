@@ -1,4 +1,4 @@
-import type { CategoryNode, ResourcePage } from "./types";
+import type { CategoryNode, Resource, ResourcePage } from "./types";
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -29,4 +29,17 @@ export function fetchResources(query: ResourceQuery) {
   if (query.limit) params.set("limit", String(query.limit));
   const qs = params.toString();
   return getJson<ResourcePage>(`/api/resources${qs ? `?${qs}` : ""}`);
+}
+
+/** "Smart search" — embeds the query and ranks results by meaning, not keywords. */
+export function fetchSmartSearch(q: string, limit = 24) {
+  if (!q.trim()) return Promise.resolve({ items: [] as Resource[], total: 0 });
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  return getJson<{ items: Resource[]; total: number }>(`/api/search/smart?${params}`);
+}
+
+export function fetchRelated(resourceId: number) {
+  return getJson<{ items: Resource[] }>(`/api/resources/${resourceId}/related`).then(
+    (d) => d.items,
+  );
 }

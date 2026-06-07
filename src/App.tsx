@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { fetchCategories, fetchResources } from './api';
+import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
+import { fetchCategories, fetchResources, fetchSmartSearch } from './api';
 import CategorySidebar from './components/CategorySidebar';
 import ResourceCard from './components/ResourceCard';
 import ResourceRow from './components/ResourceRow';
@@ -89,7 +89,11 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [smartMode, setSmartMode] = useLocalStorage('smartSearch', false);
   const q = useDebounced(search, 280);
+  // Smart search costs an AI embedding call per query — debounce harder so we
+  // don't fire one on every keystroke.
+  const smartQ = useDebounced(search, 700);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setPage(1), [category, type, q]);
@@ -116,10 +120,28 @@ export default function App() {
     queryKey: ['resources', { category, type, q, page }],
     queryFn: () => fetchResources({ category, type: type || null, q, page, limit: LIMIT }),
     placeholderData: keepPreviousData,
+    enabled: !smartMode,
+  });
+
+  const smartQuery = useQuery({
+    queryKey: ['smart-search', smartQ],
+    queryFn: () => fetchSmartSearch(smartQ, 36),
+    enabled: smartMode && smartQ.trim().length > 0,
+    placeholderData: keepPreviousData,
   });
 
   const page_ = resourcesQuery.data;
   const totalPages = page_ ? Math.max(1, Math.ceil(page_.total / LIMIT)) : 1;
+
+  // Unify the two modes behind one shape the render below already understands.
+  const results = smartMode
+    ? { items: smartQuery.data?.items ?? [], total: smartQuery.data?.total ?? 0 }
+    : { items: page_?.items ?? [], total: page_?.total ?? 0 };
+  const isLoading = smartMode ? smartQuery.isFetching : resourcesQuery.isLoading;
+  const isError = smartMode ? smartQuery.isError : resourcesQuery.isError;
+  const showEmpty = smartMode
+    ? smartMode && smartQ.trim().length > 0 && !smartQuery.isFetching && results.items.length === 0
+    : !!page_ && page_.items.length === 0 && !resourcesQuery.isLoading;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--of-bg-base)', color: 'var(--of-fg-default)' }}>
@@ -156,19 +178,36 @@ export default function App() {
           </a>
 
           <div className="ml-auto flex items-center gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search…"
-              className={inputClass({ className: 'w-40 sm:w-56' })}
-              style={{ height: '34px', padding: '0 10px' }}
-            />
+            <div className="relative">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
+                className={inputClass({ className: 'w-40 sm:w-64' })}
+                style={{ height: '34px', padding: '0 10px' }}
+              />
+            </div>
+            <button
+              onClick={() => setSmartMode(!smartMode)}
+              title={smartMode ? 'Smart search on — ranks by meaning, not keywords' : 'Turn on Smart search (AI-ranked by meaning)'}
+              className="flex h-[34px] items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
+              style={{
+                background: smartMode ? 'var(--of-bg-brand-tint)' : 'var(--of-bg-recessed)',
+                color: smartMode ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+                border: `1px solid ${smartMode ? 'color-mix(in srgb, var(--of-magenta-400) 35%, transparent)' : 'var(--of-border-line)'}`,
+              }}
+            >
+              <Sparkles size={14} strokeWidth={1.75} />
+              <span className="hidden sm:inline">Smart</span>
+            </button>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
+              disabled={smartMode}
+              title={smartMode ? 'Type filter is unavailable in Smart search — it ranks across everything by meaning' : undefined}
               className={selectClass({ className: 'hidden sm:block w-36' })}
-              style={{ height: '34px', padding: '0 8px' }}
+              style={{ height: '34px', padding: '0 8px', opacity: smartMode ? 0.5 : 1 }}
             >
               {TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -274,39 +313,61 @@ export default function App() {
 
         {/* Main content */}
         <main className="min-w-0 flex-1">
+          {smartMode && (
+            <div
+              className="mb-4 flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm"
+              style={{
+                background: 'var(--of-bg-brand-tint)',
+                borderColor: 'color-mix(in srgb, var(--of-magenta-400) 30%, transparent)',
+                color: 'var(--of-fg-brand)',
+              }}
+            >
+              <Sparkles size={16} strokeWidth={1.75} className="mt-0.5 shrink-0" />
+              <span>
+                <strong>Smart search</strong> ranks results by meaning rather than exact keyword
+                matches — try describing what you're after, e.g. "building trust with engineers"
+                or "running a design critique". Category and type filters are off while it's on.
+              </span>
+            </div>
+          )}
+
           <div
             className="mb-4 flex items-center justify-between text-xs"
             style={{ color: 'var(--of-fg-subtle)' }}
           >
             <span>
-              {resourcesQuery.isLoading
+              {smartMode && !smartQ.trim()
+                ? 'Type something to search by meaning…'
+                : isLoading
                 ? 'Loading…'
-                : `${page_?.total ?? 0} resource${page_?.total === 1 ? '' : 's'}`}
+                : `${results.total} resource${results.total === 1 ? '' : 's'}`}
             </span>
           </div>
 
-          {resourcesQuery.isError && (
+          {isError && (
             <p style={{ color: 'var(--of-fg-danger)' }}>Failed to load resources.</p>
           )}
 
-          {page_ && page_.items.length === 0 && !resourcesQuery.isLoading && (
-            <p style={{ color: 'var(--of-fg-subtle)' }}>No resources match these filters.</p>
+          {showEmpty && (
+            <p style={{ color: 'var(--of-fg-subtle)' }}>
+              {smartMode ? 'Nothing ranked closely enough — try rephrasing.' : 'No resources match these filters.'}
+            </p>
           )}
 
           {view === 'card' ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {page_?.items.map((r) => <ResourceCard key={r.id} resource={r} />)}
+              {results.items.map((r) => <ResourceCard key={r.id} resource={r} />)}
             </div>
           ) : (
             <div
               className="rounded-lg border overflow-hidden"
               style={{ borderColor: 'var(--of-border-line)', background: 'var(--of-bg-elevated)' }}
             >
-              {page_?.items.map((r) => <ResourceRow key={r.id} resource={r} />)}
+              {results.items.map((r) => <ResourceRow key={r.id} resource={r} />)}
             </div>
           )}
 
-          {page_ && totalPages > 1 && (
+          {!smartMode && page_ && totalPages > 1 && (
             <div className="mt-8 flex items-center justify-center gap-3">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
