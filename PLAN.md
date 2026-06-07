@@ -200,14 +200,36 @@ git-install won't work cleanly, and it's not on public npm. Plan:
 
 ## 9. Deployment (Cloudflare Workers)
 
-- [ ] Create the **remote D1** database; replace `REPLACE_WITH_D1_DATABASE_ID`
-      in `wrangler.jsonc`.
-- [ ] Apply migrations remotely: `npm run db:migrate:remote`.
-- [ ] Seed remotely: `wrangler d1 execute design-resources --remote --file=db/seed/coda-import.sql`.
-- [ ] Add bindings as phases land: `AI`, `VECTORIZE`, `IMAGES` (R2, if image
-      uploads are needed).
-- [ ] Configure **Cloudflare Access** application over `/admin` + `/api/admin/*`.
-- [ ] `npm run deploy` (build + `wrangler deploy`). Custom domain optional.
+**Live at https://design-resources.coscient.workers.dev** (deployed 2026-06-07).
+
+Done:
+- [x] Created remote D1 (`06d57493-5b56-4277-a712-5d8811c8b971`), wired into
+      `wrangler.jsonc`, applied schema migration + all seed data (categories,
+      451 Coda resources, people merge/tags, Changying, cleanup). Remote and
+      local now match: 41 categories, 452 resources.
+- [x] `npm run deploy` — live and serving.
+
+**⚠ Incident (resolved):** the first deploy shipped `ADMIN_BYPASS_LOCAL=true`
+to production because it lived in `wrangler.jsonc` `vars` (which get bundled
+into every deploy), leaving `/api/admin/*` open with no auth for a few minutes.
+Fixed by moving it to `.dev.vars` (gitignored, local-only — Wrangler loads it
+for `dev` but never deploys it). Redeployed immediately; confirmed `/api/admin/*`
+now returns `401` in production. **Lesson: anything in `wrangler.jsonc vars`
+ships to prod — bypass/dev-only flags belong in `.dev.vars` or secrets.**
+
+Still open:
+- [ ] **Configure Cloudflare Access** over `/admin` + `/api/admin/*`:
+      create the Access application, copy its Audience (AUD) tag, then
+      `wrangler secret put CF_ACCESS_AUD`. Until this is done, `/admin` is
+      completely inaccessible in production (by design — fails closed).
+- [ ] Add bindings as later phases land: `AI`, `VECTORIZE`, `IMAGES`.
+- [ ] Custom domain (optional).
+
+Seed files now include portable, slug/title-keyed variants
+(`db/seed/remote-people-merge-and-tags.sql`, `cleanup-people-category.sql`)
+because **local and remote D1 assign different autoincrement ids** from the
+same seed — hardcoded-id migrations only work on the instance they were
+written against. Prefer slug/title lookups in future data migrations.
 
 ---
 
@@ -217,13 +239,13 @@ git-install won't work cleanly, and it's not on public npm. Plan:
 |------|-------|--------|
 | 0 | Scaffold (React+Vite+Hono+D1) | ✅ done |
 | 1 | Coda importer + migrate 451 resources | ✅ done |
-| 2 | Public browse API + UI (card grid, filters, search) | ✅ done (list-view toggle outstanding) |
-| 2.1 | List/card view toggle + mobile sidebar | ⏳ next |
-| 3 | Admin CRUD + Cloudflare Access | ⏳ |
-| 4 | Public suggestions + approval queue | ⏳ |
+| 2 | Public browse API + UI (card grid, filters, search) | ✅ done |
+| 2.1 | List/card view toggle, theme toggle, mobile sidebar | ✅ done |
+| 3 | Admin CRUD (resources/categories/suggestions) | ✅ done — Cloudflare Access wiring outstanding |
+| 4 | Public suggestions + approval queue | ⏳ (approval-queue UI done in Phase 3; submit form outstanding) |
 | 5 | AI findability (Workers AI + Vectorize) | ⏳ |
-| 6 | Keel design system adoption | ⏳ (can run alongside 2.1) |
-| 7 | Remote deploy + Access config | ⏳ |
+| 6 | Keel design system adoption | ✅ vendored + applied to public UI (admin pages still use raw Keel classes inline — fine, but could extract shared components) |
+| 7 | Remote deploy | ✅ live at design-resources.coscient.workers.dev — Access config outstanding |
 
 ---
 
