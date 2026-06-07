@@ -10,18 +10,16 @@
   "observability": {
     "enabled": true
   },
-  // ADMIN_BYPASS_LOCAL=true skips Cloudflare Access JWT validation in local dev.
-  // Remove or set to "false" when deploying; real validation uses CF_ACCESS_AUD.
-  "vars": {
-    "ADMIN_BYPASS_LOCAL": "true"
-  },
+  // ADMIN_BYPASS_LOCAL is set via .dev.vars (gitignored, local-only — never
+  // deployed). It skips Cloudflare Access JWT validation in local dev.
+  // Production validates Cf-Access-Jwt-Assertion using the CF_ACCESS_AUD secret.
   // D1 database. Create with: npx wrangler d1 create design-resources
   // then paste the returned database_id below (replace the placeholder).
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "design-resources",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "06d57493-5b56-4277-a712-5d8811c8b971",
       "migrations_dir": "db/migrations"
     }
   ]
