@@ -172,26 +172,24 @@ export default function App() {
 
           <a
             href="/suggest"
-            className={buttonClass({ variant: 'tint', size: 'sm', className: 'hidden sm:inline-flex' })}
+            className={buttonClass({ variant: 'tint', size: 'sm', className: 'hidden shrink-0 sm:inline-flex' })}
           >
             <Plus size={14} strokeWidth={1.75} /> Suggest a resource
           </a>
 
-          <div className="ml-auto flex items-center gap-2">
-            <div className="relative">
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
-                className={inputClass({ className: 'w-40 sm:w-64' })}
-                style={{ height: '34px', padding: '0 10px' }}
-              />
-            </div>
+          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
+              className={inputClass({ className: 'min-w-0 flex-1 max-w-sm sm:max-w-md' })}
+              style={{ height: '34px', padding: '0 10px' }}
+            />
             <button
               onClick={() => setSmartMode(!smartMode)}
               title={smartMode ? 'Smart search on — ranks by meaning, not keywords' : 'Turn on Smart search (AI-ranked by meaning)'}
-              className="flex h-[34px] items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
+              className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
               style={{
                 background: smartMode ? 'var(--of-bg-brand-tint)' : 'var(--of-bg-recessed)',
                 color: smartMode ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
@@ -206,7 +204,7 @@ export default function App() {
               onChange={(e) => setType(e.target.value)}
               disabled={smartMode}
               title={smartMode ? 'Type filter is unavailable in Smart search — it ranks across everything by meaning' : undefined}
-              className={selectClass({ className: 'hidden sm:block w-36' })}
+              className={selectClass({ className: 'hidden shrink-0 lg:block w-36' })}
               style={{ height: '34px', padding: '0 8px', opacity: smartMode ? 0.5 : 1 }}
             >
               {TYPES.map((t) => (
@@ -216,7 +214,7 @@ export default function App() {
 
             {/* View toggle */}
             <div
-              className="flex items-center rounded-md p-0.5 gap-0.5"
+              className="flex shrink-0 items-center rounded-md p-0.5 gap-0.5"
               style={{ background: 'var(--of-bg-recessed)', border: '1px solid var(--of-border-line)' }}
             >
               <button
@@ -245,7 +243,9 @@ export default function App() {
               </button>
             </div>
 
-            <ThemeToggle theme={theme} setTheme={setTheme} />
+            <div className="shrink-0">
+              <ThemeToggle theme={theme} setTheme={setTheme} />
+            </div>
           </div>
         </div>
       </header>
