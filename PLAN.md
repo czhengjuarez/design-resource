@@ -14,7 +14,8 @@ audiences:
 
 - **Public visitors** — browse, search, filter, and **suggest** new resources.
 - **Admins** (the curator) — full CRUD over categories and resources, plus an
-  approval queue for public suggestions. Gated by **Cloudflare Access**.
+  approval queue for public suggestions. Gated by a **built-in password login**
+  (see §5 for why this replaced the originally-planned Cloudflare Access).
 - **Everyone** — benefits from **AI-assisted findability** (semantic search,
   auto-tagging/categorization, related resources).
 
@@ -27,7 +28,8 @@ audiences:
 - **API:** Hono.
 - **Data:** D1 (SQLite) via Drizzle ORM.
 - **AI:** Workers AI (embeddings + text generation) and Vectorize (vector index).
-- **Auth:** Cloudflare Access in front of `/admin` and `/api/admin/*`.
+- **Auth:** built-in password session auth (`worker/auth.ts`) in front of
+  `/admin` and `/api/admin/*` — see §5 for why this replaced Cloudflare Access.
 - **Styling:** **Keel design system** (`@ops-forward/keel`) — see §8.
 - **Deploy:** `wrangler deploy` to Cloudflare Workers (see §9).
 
@@ -78,24 +80,35 @@ Planned additions in later phases:
 
 ---
 
-## 5. Feature area: Admin (Cloudflare Access)  *(Phase 3)*
+## 5. Feature area: Admin (password-gated)  *(Phase 3)*
 
-Curator-only. **Protected by Cloudflare Access** — the Worker validates the
-`Cf-Access-Jwt-Assertion` header (verify against the team's public keys /
-`aud`) on every `/api/admin/*` route, and the `/admin` SPA routes are behind the
-same Access application.
+Curator-only. **Protected by built-in password auth** (not Cloudflare Access
+— see decision below): `worker/auth.ts` issues a signed, httpOnly session
+cookie after a correct `ADMIN_PASSWORD`; `adminAuth` middleware gates every
+`/api/admin/*` route, and `AdminLayout` redirects unauthenticated visitors
+to `/admin/login` client-side. ✅ shipped.
 
-**Capabilities:**
-- [ ] **Resources CRUD:** create, edit, delete; bulk actions.
-- [ ] **Move** a resource to a different category.
-- [ ] **Categories CRUD:** create, rename, edit icon/description, delete.
-      **Delete = reparent:** on deletion, the node's children are reparented to
-      the deleted node's `parentId` (→ top-level if it was a section), and
-      resources pointing at it move to that same `parentId` (null if it was a
-      section). No orphans, no data loss.
-- [ ] **Reorder / re-nest** categories (drag-and-drop → `sortOrder` / `parentId`).
-- [ ] **Suggestion queue** (overlaps §6): list `status='pending'`, approve
-      (→ `published`) or reject (→ `rejected`), optionally edit before approving.
+> **Why not Cloudflare Access?** Access path-scoped applications (gate just
+> `/admin`, leave the public site open) require the hostname to belong to a
+> zone (custom domain) in your account. The shared `*.workers.dev` domain only
+> supports gating an *entire* worker — which would force login on every public
+> visitor too. Rather than buy/connect a domain just for this, we built a
+> small password-gate directly into the Worker: `wrangler secret put
+> ADMIN_PASSWORD` in production, `.dev.vars` locally. If a custom domain is
+> added later, swapping back to Access is a clean drop-in (the middleware
+> shape is the same).
+
+**Capabilities — all shipped:**
+- [x] **Resources CRUD:** create, edit, delete (table + modal forms in AdminResources).
+- [x] **Move** a resource to a different category (category picker in the edit form).
+- [x] **Categories CRUD:** create, rename, edit icon/description, delete.
+      **Delete = reparent** (implemented exactly as designed): children and
+      resources move to the deleted node's `parentId`. No orphans, no data loss.
+- [x] **Suggestion queue:** AdminSuggestions lists `status='pending'`, with
+      one-click approve/reject or "Review & edit" before publishing.
+- [ ] **Reorder / re-nest** categories via drag-and-drop (currently: edit the
+      parent dropdown manually — functional but not as ergonomic).
+- [ ] Bulk actions on resources (multi-select delete/move/retag).
 
 **API sketch:**
 ```
@@ -218,12 +231,12 @@ now returns `401` in production. **Lesson: anything in `wrangler.jsonc vars`
 ships to prod — bypass/dev-only flags belong in `.dev.vars` or secrets.**
 
 Still open:
-- [ ] **Configure Cloudflare Access** over `/admin` + `/api/admin/*`:
-      create the Access application, copy its Audience (AUD) tag, then
-      `wrangler secret put CF_ACCESS_AUD`. Until this is done, `/admin` is
-      completely inaccessible in production (by design — fails closed).
+- [ ] **Set the production admin password**: `wrangler secret put ADMIN_PASSWORD`
+      (run by the user directly — secrets must never pass through chat/agent
+      context). Until set, `/admin` login always fails closed (no bypass).
 - [ ] Add bindings as later phases land: `AI`, `VECTORIZE`, `IMAGES`.
-- [ ] Custom domain (optional).
+- [ ] Custom domain (optional — would also unlock swapping to Cloudflare
+      Access with path-scoped rules, see §5).
 
 Seed files now include portable, slug/title-keyed variants
 (`db/seed/remote-people-merge-and-tags.sql`, `cleanup-people-category.sql`)
@@ -241,11 +254,11 @@ written against. Prefer slug/title lookups in future data migrations.
 | 1 | Coda importer + migrate 451 resources | ✅ done |
 | 2 | Public browse API + UI (card grid, filters, search) | ✅ done |
 | 2.1 | List/card view toggle, theme toggle, mobile sidebar | ✅ done |
-| 3 | Admin CRUD (resources/categories/suggestions) | ✅ done — Cloudflare Access wiring outstanding |
+| 3 | Admin CRUD + auth (resources/categories/suggestions, password gate) | ✅ done — set ADMIN_PASSWORD secret in prod |
 | 4 | Public suggestions + approval queue | ⏳ (approval-queue UI done in Phase 3; submit form outstanding) |
 | 5 | AI findability (Workers AI + Vectorize) | ⏳ |
 | 6 | Keel design system adoption | ✅ vendored + applied to public UI (admin pages still use raw Keel classes inline — fine, but could extract shared components) |
-| 7 | Remote deploy | ✅ live at design-resources.coscient.workers.dev — Access config outstanding |
+| 7 | Remote deploy | ✅ live at design-resources.coscient.workers.dev |
 
 ---
 
@@ -261,7 +274,12 @@ written against. Prefer slug/title lookups in future data migrations.
 4. ✅ **Search strategy** — **hybrid**: keyword/LIKE by default, opt-in "Smart
    search" semantic mode + related-resources. See §7.
 
+**Resolved (Phase 3 build):**
+6. ✅ **Admin auth model** — single shared password (not Cloudflare Access — see
+   §5 for why), since the project has one curator and no custom domain. No
+   per-admin identity, so no `updatedBy` auditing for now. If multiple admins
+   are ever needed, swap the password gate for per-user accounts (or get a
+   domain and use Access with email-based policies + audit logs for free).
+
 **Still open:**
 5. **Suggestion spam protection** — Turnstile or simpler? (Phase 4)
-6. **Admin identity** — single curator, or multiple Access-authorized admins
-   (do we need `updatedBy` auditing)? (Phase 3)
