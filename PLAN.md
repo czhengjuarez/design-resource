@@ -125,19 +125,32 @@ POST   /api/admin/suggestions/:id/reject
 
 ---
 
-## 6. Feature area: Public suggestions  *(Phase 4)*
+## 6. Feature area: Public suggestions  *(Phase 4 — ✅ done)*
 
 Let any visitor propose a resource into a chosen category; it lands as
 `status='pending'` for admin approval.
 
-- [ ] Public submit form: title, url, type, category (from the tree),
-      description, optional submitter name/email.
-- [ ] `POST /api/suggestions` → inserts `status='pending'`, `source='suggestion'`.
-      Rate-limit / basic spam protection (e.g. Turnstile).
-- [ ] Pending items never appear in public browse (already enforced: public
-      queries filter `status='published'`).
-- [ ] Approval handled in the admin suggestion queue (§5).
-- [ ] (Optional) email the submitter on approve/reject via Cloudflare Email.
+- [x] Public submit form at `/suggest` (`SuggestPage.tsx`): title, url, type,
+      category (flattened tree dropdown), description, optional submitter
+      name/email. Linked from the public header and mobile drawer.
+- [x] `POST /api/suggestions` → inserts `status='pending'`, `source='suggestion'`.
+      **Spam protection (resolves Q5 — chose "simpler" over Turnstile):**
+      no external service/dashboard setup needed —
+        - honeypot field, visually hidden off-screen (not `display:none`,
+          which basic bots skip)
+        - `renderedAt` timing check: rejects submissions faster than a human
+          could plausibly fill the form (<3s)
+      Both failure modes return a generic `201 {ok:true}` so automated
+      submitters can't learn to adapt and probe for the real validation.
+- [x] Pending items never appear in public browse (enforced: public queries
+      filter `status='published'`) — verified end to end.
+- [x] Approval handled in the admin suggestion queue (§5, shipped Phase 3).
+- [ ] (Optional, not done) email the submitter on approve/reject via
+      Cloudflare Email.
+
+**Verified end-to-end:** spam (honeypot/too-fast) silently dropped → nothing
+written; legit submission lands in admin's pending queue; pending items stay
+fully invisible in public browse (`0` results when searched publicly).
 
 ---
 
@@ -255,7 +268,7 @@ written against. Prefer slug/title lookups in future data migrations.
 | 2 | Public browse API + UI (card grid, filters, search) | ✅ done |
 | 2.1 | List/card view toggle, theme toggle, mobile sidebar | ✅ done |
 | 3 | Admin CRUD + auth (resources/categories/suggestions, password gate) | ✅ done — set ADMIN_PASSWORD secret in prod |
-| 4 | Public suggestions + approval queue | ⏳ (approval-queue UI done in Phase 3; submit form outstanding) |
+| 4 | Public suggestions + approval queue | ✅ done — submit form (/suggest) + honeypot/timing spam checks, full pipeline verified |
 | 5 | AI findability (Workers AI + Vectorize) | ⏳ |
 | 6 | Keel design system adoption | ✅ vendored + applied to public UI (admin pages still use raw Keel classes inline — fine, but could extract shared components) |
 | 7 | Remote deploy | ✅ live at design-resources.coscient.workers.dev |
@@ -281,5 +294,12 @@ written against. Prefer slug/title lookups in future data migrations.
    are ever needed, swap the password gate for per-user accounts (or get a
    domain and use Access with email-based policies + audit logs for free).
 
-**Still open:**
-5. **Suggestion spam protection** — Turnstile or simpler? (Phase 4)
+**Resolved (Phase 4 build):**
+5. ✅ **Suggestion spam protection** — chose **simpler over Turnstile**: a
+   honeypot field + submission-timing check, both built into the Worker with
+   zero external services or dashboard config. See §6 for details and the
+   verified results. Revisit only if real spam shows up in the queue —
+   Turnstile remains the natural upgrade path if so.
+
+**No open questions remain** — all six original items are resolved. Update
+this section as new questions arise in later phases.
