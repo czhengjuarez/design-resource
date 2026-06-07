@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
+import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus, Sparkles, ListFilter } from 'lucide-react';
 import { fetchCategories, fetchResources, fetchSmartSearch } from './api';
 import CategorySidebar from './components/CategorySidebar';
 import ResourceCard from './components/ResourceCard';
@@ -12,16 +12,16 @@ const TYPES = [
   { value: '', label: 'All types' },
   { value: 'article', label: 'Articles' },
   { value: 'book', label: 'Books' },
-  { value: 'talk', label: 'Talks' },
-  { value: 'video', label: 'Videos' },
-  { value: 'podcast', label: 'Podcasts' },
-  { value: 'newsletter', label: 'Newsletters' },
-  { value: 'tool', label: 'Tools' },
-  { value: 'method', label: 'Methods' },
-  { value: 'person', label: 'People' },
   { value: 'event', label: 'Events' },
-  { value: 'thread', label: 'Threads' },
+  { value: 'method', label: 'Methods' },
+  { value: 'newsletter', label: 'Newsletters' },
   { value: 'note', label: 'Notes' },
+  { value: 'person', label: 'People' },
+  { value: 'podcast', label: 'Podcasts' },
+  { value: 'talk', label: 'Talks' },
+  { value: 'thread', label: 'Threads' },
+  { value: 'tool', label: 'Tools' },
+  { value: 'video', label: 'Videos' },
 ];
 
 const LIMIT = 24;
@@ -153,101 +153,126 @@ export default function App() {
           borderColor: 'var(--of-border-line)',
         }}
       >
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
-          {/* Mobile filter button */}
-          <button
-            className="flex items-center gap-1.5 md:hidden"
-            style={{ color: 'var(--of-fg-muted)' }}
-            onClick={() => setDrawerOpen(true)}
-          >
-            <SlidersHorizontal size={16} strokeWidth={1.75} />
-          </button>
-
-          <h1
-            className="shrink-0 text-base font-semibold tracking-tight"
-            style={{ fontFamily: 'var(--of-font-display)', color: 'var(--of-fg-default)' }}
-          >
-            Design Resources
-          </h1>
-
-          <a
-            href="/suggest"
-            className={buttonClass({ variant: 'tint', size: 'sm', className: 'hidden shrink-0 sm:inline-flex' })}
-          >
-            <Plus size={14} strokeWidth={1.75} /> Suggest a resource
-          </a>
-
-          {/* Single flex row from here on — the search input is the ONLY
-              growing element among shrink-0 siblings. Nesting another flex-1
-              container here previously caused its children to overflow their
-              allotted space and visually spill over the title/suggest button. */}
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
-            className={inputClass({ className: 'min-w-0 flex-1 max-w-md' })}
-            style={{ height: '34px', padding: '0 10px' }}
-          />
-          <button
-            onClick={() => setSmartMode(!smartMode)}
-            title={smartMode ? 'Smart search on — ranks by meaning, not keywords' : 'Turn on Smart search (AI-ranked by meaning)'}
-            className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
-            style={{
-              background: smartMode ? 'var(--of-bg-brand-tint)' : 'var(--of-bg-recessed)',
-              color: smartMode ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
-              border: `1px solid ${smartMode ? 'color-mix(in srgb, var(--of-magenta-400) 35%, transparent)' : 'var(--of-border-line)'}`,
-            }}
-          >
-            <Sparkles size={14} strokeWidth={1.75} />
-            <span className="hidden sm:inline">Smart</span>
-          </button>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            disabled={smartMode}
-            title={smartMode ? 'Type filter is unavailable in Smart search — it ranks across everything by meaning' : undefined}
-            className={selectClass({ className: 'hidden shrink-0 lg:block w-36' })}
-            style={{ height: '34px', padding: '0 8px', opacity: smartMode ? 0.5 : 1 }}
-          >
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-
-          {/* View toggle */}
-          <div
-            className="flex shrink-0 items-center rounded-md p-0.5 gap-0.5"
-            style={{ background: 'var(--of-bg-recessed)', border: '1px solid var(--of-border-line)' }}
-          >
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-2.5">
+          {/* Title row — title/actions on the left, view & theme toggles pinned
+              right. flex-wrap lets the right-hand group drop to its own line
+              on narrow screens instead of overflowing past the search row's
+              width below it. */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Mobile filter button */}
             <button
-              onClick={() => setView('card')}
-              title="Card view"
-              className="flex h-7 w-7 items-center justify-center rounded transition-colors"
-              style={{
-                background: view === 'card' ? 'var(--of-bg-elevated)' : 'transparent',
-                color: view === 'card' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
-                boxShadow: view === 'card' ? 'var(--of-shadow-xs)' : 'none',
-              }}
+              className="flex items-center gap-1.5 md:hidden"
+              style={{ color: 'var(--of-fg-muted)' }}
+              onClick={() => setDrawerOpen(true)}
             >
-              <LayoutGrid size={14} strokeWidth={1.75} />
+              <SlidersHorizontal size={16} strokeWidth={1.75} />
             </button>
-            <button
-              onClick={() => setView('list')}
-              title="List view"
-              className="flex h-7 w-7 items-center justify-center rounded transition-colors"
-              style={{
-                background: view === 'list' ? 'var(--of-bg-elevated)' : 'transparent',
-                color: view === 'list' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
-                boxShadow: view === 'list' ? 'var(--of-shadow-xs)' : 'none',
-              }}
+
+            <h1
+              className="shrink-0 text-base font-semibold tracking-tight"
+              style={{ fontFamily: 'var(--of-font-display)', color: 'var(--of-fg-default)' }}
             >
-              <List size={14} strokeWidth={1.75} />
-            </button>
+              Design Resources
+            </h1>
+
+            <a
+              href="/about"
+              className="ml-1 hidden shrink-0 text-sm font-medium sm:inline-flex"
+              style={{ color: 'var(--of-fg-subtle)' }}
+            >
+              About
+            </a>
+
+            <a
+              href="/suggest"
+              className="hidden shrink-0 items-center gap-1.5 text-sm font-medium sm:inline-flex"
+              style={{ color: 'var(--of-fg-subtle)' }}
+            >
+              <Plus size={14} strokeWidth={1.75} style={{ color: 'var(--of-fg-brand)' }} /> Suggest a resource
+            </a>
+
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <div className="relative shrink-0">
+                <ListFilter
+                  size={14}
+                  strokeWidth={1.75}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--of-fg-subtle)', opacity: smartMode ? 0.5 : 1 }}
+                />
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  disabled={smartMode}
+                  aria-label="Filter by resource type"
+                  title={smartMode ? 'Type filter is unavailable in Smart search — it ranks across everything by meaning' : 'Filter by resource type'}
+                  className={selectClass({ className: '!w-28 sm:!w-36' })}
+                  style={{ height: '34px', padding: '0 8px 0 26px', opacity: smartMode ? 0.5 : 1 }}
+                >
+                  {TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* View toggle */}
+              <div
+                className="flex shrink-0 items-center rounded-md p-0.5 gap-0.5"
+                style={{ background: 'var(--of-bg-recessed)', border: '1px solid var(--of-border-line)' }}
+              >
+                <button
+                  onClick={() => setView('card')}
+                  title="Card view"
+                  className="flex h-7 w-7 items-center justify-center rounded transition-colors"
+                  style={{
+                    background: view === 'card' ? 'var(--of-bg-elevated)' : 'transparent',
+                    color: view === 'card' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+                    boxShadow: view === 'card' ? 'var(--of-shadow-xs)' : 'none',
+                  }}
+                >
+                  <LayoutGrid size={14} strokeWidth={1.75} />
+                </button>
+                <button
+                  onClick={() => setView('list')}
+                  title="List view"
+                  className="flex h-7 w-7 items-center justify-center rounded transition-colors"
+                  style={{
+                    background: view === 'list' ? 'var(--of-bg-elevated)' : 'transparent',
+                    color: view === 'list' ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+                    boxShadow: view === 'list' ? 'var(--of-shadow-xs)' : 'none',
+                  }}
+                >
+                  <List size={14} strokeWidth={1.75} />
+                </button>
+              </div>
+
+              <ThemeToggle theme={theme} setTheme={setTheme} />
+            </div>
           </div>
 
-          <div className="shrink-0">
-            <ThemeToggle theme={theme} setTheme={setTheme} />
+          {/* Search row — input gets the full header width to itself, with
+              the Smart toggle as its mode switch right alongside it. */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={smartMode ? 'Describe what you want…' : 'Search…'}
+              className={inputClass({ className: 'min-w-0 flex-1' })}
+              style={{ height: '34px', padding: '0 10px' }}
+            />
+            <button
+              onClick={() => setSmartMode(!smartMode)}
+              title={smartMode ? 'Smart search on — ranks by meaning, not keywords' : 'Turn on Smart search (AI-ranked by meaning)'}
+              className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors"
+              style={{
+                background: smartMode ? 'var(--of-bg-brand-tint)' : 'var(--of-bg-recessed)',
+                color: smartMode ? 'var(--of-fg-brand)' : 'var(--of-fg-subtle)',
+                border: `1px solid ${smartMode ? 'color-mix(in srgb, var(--of-magenta-400) 35%, transparent)' : 'var(--of-border-line)'}`,
+              }}
+            >
+              <Sparkles size={14} strokeWidth={1.75} />
+              <span className="hidden sm:inline">Smart</span>
+            </button>
           </div>
         </div>
       </header>
@@ -294,6 +319,12 @@ export default function App() {
               className={buttonClass({ variant: 'tint', size: 'sm', className: 'mt-4 w-full justify-center' })}
             >
               <Plus size={14} strokeWidth={1.75} /> Suggest a resource
+            </a>
+            <a
+              href="/about"
+              className={buttonClass({ variant: 'ghost', size: 'sm', className: 'mt-2 w-full justify-center' })}
+            >
+              About
             </a>
           </div>
         </div>

@@ -219,7 +219,7 @@ app.get("/api/resources", async (c) => {
     .select()
     .from(resources)
     .where(where)
-    .orderBy(sql`${resources.createdAt} desc`, resources.id)
+    .orderBy(sql`lower(${resources.title}) asc`, resources.id)
     .limit(limit)
     .offset(offset)
     .all();
