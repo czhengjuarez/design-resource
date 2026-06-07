@@ -1,5 +1,5 @@
-import { ExternalLink, Link2 } from 'lucide-react';
-import { badgeClass, cardClass, buttonClass } from '../keel';
+import { ExternalLink } from 'lucide-react';
+import { badgeClass, cardClass } from '../keel';
 import type { KeelBadgeVariant } from '../keel';
 import type { Resource } from '../types';
 
@@ -23,86 +23,7 @@ function hostname(url: string) {
   catch { return null; }
 }
 
-function initials(name: string) {
-  return name
-    .replace(/\([^)]*\)/g, '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-function PersonCard({ resource }: { resource: Resource }) {
-  const { url, title, description, tags } = resource;
-  const isLinkedIn = url?.includes('linkedin.com');
-
-  return (
-    <div
-      className={cardClass({ className: 'flex flex-col gap-3' })}
-      style={{ minHeight: '140px' }}
-    >
-      {/* Avatar + name row */}
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-          style={{
-            background: 'var(--of-bg-brand-tint)',
-            color: 'var(--of-fg-brand)',
-            border: '1px solid color-mix(in srgb, var(--of-magenta-400) 25%, transparent)',
-            fontFamily: 'var(--of-font-display)',
-          }}
-        >
-          {initials(title)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className="truncate font-semibold leading-tight"
-            style={{ color: 'var(--of-fg-default)', fontSize: 'var(--of-text-sm)' }}
-          >
-            {title}
-          </p>
-          {description && (
-            <p
-              className="mt-0.5 line-clamp-1 text-xs leading-snug"
-              style={{ color: 'var(--of-fg-muted)' }}
-            >
-              {description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Specialty tags */}
-      {tags && tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {tags.map((t) => (
-            <span key={t} className={badgeClass({ variant: 'purple' })}>{t}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Link */}
-      {url && (
-        <div className="mt-auto pt-1">
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClass({ variant: 'tint', size: 'sm', className: 'w-full justify-center gap-1.5' })}
-          >
-            {isLinkedIn
-              ? <><Link2 size={13} strokeWidth={1.75} /> LinkedIn</>
-              : <><ExternalLink size={13} strokeWidth={1.75} /> Visit</>}
-          </a>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ResourceCard({ resource }: { resource: Resource }) {
+export default function ResourceCard({ resource }: { resource: Resource }) {
   const { url, title, description, author, type, tags } = resource;
   const meta = TYPE_META[type] ?? { label: type, variant: 'default' as KeelBadgeVariant };
   const host = url ? hostname(url) : null;
@@ -154,10 +75,4 @@ function ResourceCard({ resource }: { resource: Resource }) {
   ) : (
     <div className={base}>{inner}</div>
   );
-}
-
-export default function SmartCard({ resource }: { resource: Resource }) {
-  return resource.type === 'person'
-    ? <PersonCard resource={resource} />
-    : <ResourceCard resource={resource} />;
 }
