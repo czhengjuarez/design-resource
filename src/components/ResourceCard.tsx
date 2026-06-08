@@ -97,7 +97,7 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
         )}
       </div>
       <h3
-        className="mt-3 text-sm font-semibold leading-snug"
+        className="mt-3 line-clamp-2 break-words text-sm font-semibold leading-snug"
         style={{ color: 'var(--of-fg-default)' }}
       >
         {title}
@@ -107,7 +107,7 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
       )}
       {description && (
         <p
-          className="mt-2 line-clamp-3 text-xs leading-relaxed"
+          className="mt-2 line-clamp-3 break-words text-xs leading-relaxed"
           style={{ color: 'var(--of-fg-muted)' }}
         >
           {description}
