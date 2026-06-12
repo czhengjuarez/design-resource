@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus, Sparkles, ListFilter } from 'lucide-react';
+import { LayoutGrid, List, Sun, Moon, Monitor, SlidersHorizontal, X, ChevronLeft, ChevronRight, Plus, Sparkles, ListFilter, Library } from 'lucide-react';
 import { fetchCategories, fetchResources, fetchSmartSearch } from './api';
 import CategorySidebar from './components/CategorySidebar';
 import ResourceCard from './components/ResourceCard';
@@ -169,9 +169,10 @@ export default function App() {
             </button>
 
             <h1
-              className="shrink-0 text-base font-semibold tracking-tight"
+              className="flex shrink-0 items-center gap-1.5 text-base font-semibold tracking-tight"
               style={{ fontFamily: 'var(--of-font-display)', color: 'var(--of-fg-default)' }}
             >
+              <Library size={18} strokeWidth={1.75} style={{ color: 'var(--of-fg-brand)' }} />
               Design Resources
             </h1>
 

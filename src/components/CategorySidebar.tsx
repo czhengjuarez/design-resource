@@ -54,6 +54,11 @@ function TreeItem({
         >
           {node.icon && <span className="shrink-0 text-base leading-none">{node.icon}</span>}
           <span className="truncate">{node.name}</span>
+          {node.slug === 'tools-template-wip' && (
+            <span className="shrink-0 text-xs italic" style={{ color: 'var(--of-fg-subtle)' }}>
+              (In construction)
+            </span>
+          )}
           <span className="ml-auto shrink-0 text-xs" style={{ color: 'var(--of-fg-subtle)' }}>
             {total}
           </span>
