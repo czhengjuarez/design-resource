@@ -93,6 +93,7 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
             src={imageUrl}
             alt={title}
             className="h-32 w-auto rounded object-cover shadow-sm"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
       )}
