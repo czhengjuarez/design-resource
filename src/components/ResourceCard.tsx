@@ -81,12 +81,21 @@ function RelatedPanel({ resourceId }: { resourceId: number }) {
 }
 
 export default function ResourceCard({ resource }: { resource: Resource }) {
-  const { url, title, description, author, type, tags } = resource;
+  const { url, title, description, author, type, tags, imageUrl } = resource;
   const meta = TYPE_META[type] ?? { label: type, variant: 'default' as KeelBadgeVariant };
   const host = url ? hostname(url) : null;
 
   const inner = (
     <>
+      {type === 'book' && imageUrl && (
+        <div className="mb-3 flex justify-center">
+          <img
+            src={imageUrl}
+            alt={title}
+            className="h-32 w-auto rounded object-cover shadow-sm"
+          />
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <span className={badgeClass({ variant: meta.variant })}>{meta.label}</span>
         {host && (
